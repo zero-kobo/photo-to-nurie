@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>写真から塗り絵｜一発ぬりえ＆アイコンメーカー（無料）</title>
-<meta name="description" content="写真を白黒の線画（塗り絵）に変換して、LINE・SNS用の丸型アイコンや印刷用ぬりえを作れる無料ツール。画像はブラウザ内だけで処理され、サーバーには送信されません。">
+<meta name="description" content="写真を白黒の線画（塗り絵）に変換して、LINE・SNS用の丸型アイコンや印刷用ぬりえを作れる無料ツール。消しゴムで仕上げの手直しもできます。画像はブラウザ内だけで処理され、サーバーには送信されません。">
 <link rel="canonical" href="https://zero-kobo.github.io/photo-to-nurie/">
 <meta name="theme-color" content="#3b6fd8">
 <meta property="og:type" content="website">
@@ -39,21 +39,27 @@ h2{font-size:18px;margin:0 0 10px}
 #stage.paper{background:#fff}
 #cv{width:100%;height:auto;display:block;touch-action:none;cursor:grab}
 #cv:active{cursor:grabbing}
+#stage[data-mode=erase] #cv,#stage[data-mode=restore] #cv{cursor:crosshair}
 #guide{position:absolute;inset:0;pointer-events:none}
 #guide i{position:absolute;inset:2%;border:2px dashed rgba(59,111,216,.85);border-radius:50%;box-shadow:0 0 0 999px rgba(243,245,248,.55)}
 #guide:after,#guide:before{content:"";position:absolute;background:rgba(59,111,216,.35)}
 #guide:before{left:50%;top:2%;bottom:2%;width:1px}
 #guide:after{top:50%;left:2%;right:2%;height:1px}
 #stage.rect #guide{display:none}
+#brush{position:absolute;display:none;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);border:2px solid #e5484d;background:rgba(229,72,77,.12)}
+#stage[data-mode=restore] #brush{border-color:var(--acc);background:rgba(59,111,216,.12)}
 #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:14px;text-align:center;padding:20px;line-height:1.6}
+.tools{margin-top:10px}
+.hint{font-size:12px;color:var(--sub);margin:6px 0 0;line-height:1.6}
 .row{margin:0 0 14px}
 .t{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:4px}
 .t span{font-weight:400;color:var(--sub)}
 input[type=range]{width:100%;height:32px;accent-color:var(--acc)}
-.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
 .seg button,.btn,.file{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 14px;cursor:pointer;min-height:42px}
 .seg button{flex:1}
 .seg button.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+button:disabled{opacity:.4;cursor:default}
 .sw{display:flex;gap:10px}
 .sw button{width:40px;height:40px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
 .sw button.on{box-shadow:0 0 0 3px var(--acc)}
@@ -72,7 +78,7 @@ footer{padding:8px 0 4px;color:var(--sub);font-size:12px}
 @media print{
  body *{visibility:hidden}
  #stage,#stage *{visibility:visible}
- #guide,#empty{display:none!important}
+ #guide,#empty,#brush{display:none!important}
  #stage{position:absolute;left:0;top:0;width:100%;border:0;background:#fff!important;border-radius:0}
  #cv{max-height:265mm;width:auto;max-width:100%;margin:0 auto}
 }
@@ -90,12 +96,26 @@ footer{padding:8px 0 4px;color:var(--sub);font-size:12px}
  <div class="grid">
   <div>
    <div id="drop">ここに写真をドラッグ＆ドロップ<br>または <label class="file">写真を選ぶ<input type="file" id="file" accept="image/*"></label></div>
-   <div id="stage">
+   <div id="stage" data-mode="move">
     <canvas id="cv" width="600" height="600" aria-label="プレビュー"></canvas>
     <div id="guide"><i></i></div>
+    <div id="brush"></div>
     <div id="empty">写真を選ぶと、ここにぬりえが表示されます</div>
    </div>
-   <p style="font-size:12px;color:var(--sub);margin:8px 0 0">ドラッグで位置を調整できます。</p>
+   <div class="tools">
+    <div class="seg" id="mode">
+     <button data-v="move" class="on">✋ 移動</button>
+     <button data-v="erase">🧽 消しゴム</button>
+     <button data-v="restore">✏️ 戻すブラシ</button>
+    </div>
+    <label class="t" for="bs">ブラシの大きさ <span id="bv">24</span></label>
+    <input type="range" id="bs" min="6" max="80" value="24">
+    <div class="seg">
+     <button id="undo" disabled>↶ 元に戻す</button>
+     <button id="redo" disabled>↷ やり直す</button>
+    </div>
+    <p class="hint">移動モードでは、ドラッグで写真の位置を調整できます。消しゴムで不要な線を消し、戻すブラシで消しすぎた線を復活できます。写真の位置・拡大・反転・形を変えると、消した跡はリセットされます。</p>
+   </div>
   </div>
 
   <div>
@@ -142,14 +162,16 @@ footer{padding:8px 0 4px;color:var(--sub);font-size:12px}
  <h2>使い方・よくある質問</h2>
  <ol>
   <li>「写真を選ぶ」か、ドラッグ＆ドロップで写真を読み込みます。</li>
-  <li>位置・拡大・線の細かさ・色などをお好みに調整します。</li>
+  <li>位置・拡大・線の細かさ・色などをお好みに調整し、必要なら消しゴムで線を整えます。</li>
   <li>「画像を保存」または「A4で印刷」で完成です。</li>
  </ol>
  <dl>
   <dt>Q. アップロードした写真はサーバーに送信されますか？</dt>
   <dd>A. ブラウザ内のみで処理されるため、外部へ送信・保存されることはありません。</dd>
   <dt>Q. 線が多すぎる／少なすぎるときは？</dt>
-  <dd>A. 「線の細かさ」スライダーで調整してください。</dd>
+  <dd>A. 「線の細かさ」スライダーで調整してください。細かい部分は消しゴムで手直しできます。</dd>
+  <dt>Q. 消しゴムで消した線を元に戻せますか？</dt>
+  <dd>A. 「戻すブラシ」でなぞると線が復活します。「元に戻す」「やり直す」ボタン（Ctrl+Z / Ctrl+Y）も使えます。</dd>
  </dl>
 </section>
 
@@ -167,30 +189,37 @@ footer{padding:8px 0 4px;color:var(--sub);font-size:12px}
 (function(){
 const $=s=>document.querySelector(s);
 const cv=$('#cv'),ctx=cv.getContext('2d',{willReadFrequently:true});
+const stage=$('#stage'),brushEl=$('#brush');
 const src=document.createElement('canvas'),sx=src.getContext('2d',{willReadFrequently:true});
-const S={shape:'circle',ox:0,oy:0,zoom:1,mirror:false,th:40,w:2,color:'#000000',bg:'white'};
+const S={shape:'circle',ox:0,oy:0,zoom:1,mirror:false,th:40,w:2,color:'#000000',bg:'white',mode:'move',bs:24};
 let img=null,W=600,H=600,raf=0,lvl=-1;
-// バッファ（サイズ変更時のみ再確保）。段階: 2=構図 1=線検出 0=太さ・色・背景
-let gray,tmp,blur,edge,dil,mask,out32,outImg;
+// バッファ（サイズ変更時のみ再確保）
+// 段階: 3=構図 2=線検出 1=太さ 0=色・背景・手直し
+let gray,tmp,blur,edge,dil,line,mask,ed,out32,outImg;
+const hist=[],redo=[],HMAX=20;
 
 function alloc(){
  const N=W*H;
  gray=new Uint8Array(N);tmp=new Uint16Array(N);blur=new Uint8Array(N);
  edge=new Uint8Array(N);dil=new Uint8Array(N);mask=new Uint8Array(N);
+ ed=new Uint8Array(N).fill(255);line=edge;
  outImg=ctx.createImageData(W,H);out32=new Uint32Array(outImg.data.buffer);
  const R=W/2,R2=R*R;
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const dx=x+.5-R,dy=y+.5-R;mask[y*W+x]=S.shape==='circle'&&dx*dx+dy*dy>R2?0:1}
+ hist.length=redo.length=0;updUndo();
 }
 function size(){
  if(S.shape==='circle'||!img){W=H=600}
  else{const r=img.width/img.height;if(r>=1){W=800;H=Math.round(800/r)}else{H=800;W=Math.round(800*r)}}
  cv.width=src.width=W;cv.height=src.height=H;
- $('#stage').classList.toggle('rect',S.shape==='rect');
- alloc();lvl=2;
+ stage.classList.toggle('rect',S.shape==='rect');
+ alloc();lvl=3;
 }
 function need(l){lvl=Math.max(lvl,l);if(!raf)raf=requestAnimationFrame(()=>{raf=0;render()})}
 
 function stageGeometry(){
+ // 構図が変わると手直しの跡は無効になる
+ ed.fill(255);hist.length=redo.length=0;updUndo();
  sx.fillStyle='#fff';sx.fillRect(0,0,W,H);
  sx.save();sx.translate(W/2+S.ox,H/2+S.oy);
  if(S.mirror)sx.scale(-1,1);
@@ -198,7 +227,6 @@ function stageGeometry(){
  sx.scale(s,s);sx.drawImage(img,-img.width/2,-img.height/2);sx.restore();
  const d=sx.getImageData(0,0,W,H).data,N=W*H;
  for(let i=0,j=0;i<N;i++,j+=4)gray[i]=(d[j]*77+d[j+1]*150+d[j+2]*29)>>8;
- // 3x3平均を横→縦の2回に分けて計算
  for(let y=0;y<H;y++){const o=y*W;for(let x=1;x<W-1;x++)tmp[o+x]=gray[o+x-1]+gray[o+x]+gray[o+x+1]}
  for(let y=1;y<H-1;y++){const o=y*W;for(let x=1;x<W-1;x++){const i=o+x;blur[i]=(tmp[i-W]+tmp[i]+tmp[i+W])/9}}
 }
@@ -210,30 +238,57 @@ function stageEdge(){
   const v=((Math.sqrt(gx*gx+gy*gy)>>2)-th)*10+128;
   edge[i]=v<0?0:v>255?255:v}}
 }
+function stageDilate(){
+ if(S.w===1){line=edge;return}
+ const wide=S.w>2;
+ for(let y=1;y<H-1;y++){let i=y*W+1;for(let x=1;x<W-1;x++,i++){
+  let m=Math.max(edge[i],edge[i-1],edge[i+1],edge[i-W],edge[i+W]);
+  if(wide)m=Math.max(m,edge[i-W-1],edge[i-W+1],edge[i+W-1],edge[i+W+1]);
+  dil[i]=m}}
+ line=dil;
+}
 function stageOutput(){
- let a=edge;
- if(S.w>1){a=dil;const wide=S.w>2;
-  for(let y=1;y<H-1;y++){let i=y*W+1;for(let x=1;x<W-1;x++,i++){
-   let m=Math.max(edge[i],edge[i-1],edge[i+1],edge[i-W],edge[i+W]);
-   if(wide)m=Math.max(m,edge[i-W-1],edge[i-W+1],edge[i+W-1],edge[i+W+1]);
-   dil[i]=m}}}
  const c=parseInt(S.color.slice(1),16),r=c>>16&255,g=c>>8&255,b=c&255,white=S.bg==='white';
  const lut=new Uint32Array(256);
  for(let k=0;k<256;k++){
   if(white){const f=k/255;lut[k]=0xff000000|(Math.round(255-f*(255-b))<<16)|(Math.round(255-f*(255-g))<<8)|Math.round(255-f*(255-r))}
   else lut[k]=((k<<24)|(b<<16)|(g<<8)|r)>>>0}
  const outside=white?0xffffffff:0,N=W*H;
- for(let i=0;i<N;i++)out32[i]=mask[i]?lut[a[i]]:outside;
+ // 線の濃さ × 手直しマスク（消しゴム=0 / そのまま=255）
+ for(let i=0;i<N;i++)out32[i]=mask[i]?lut[(line[i]*ed[i]*257+32768)>>>16]:outside;
  ctx.putImageData(outImg,0,0);
 }
 function render(){
- $('#stage').classList.toggle('paper',S.bg==='white');
+ stage.classList.toggle('paper',S.bg==='white');
  $('#empty').style.display=img?'none':'flex';
  if(!img){ctx.clearRect(0,0,W,H);lvl=-1;return}
- if(lvl>=2)stageGeometry();
- if(lvl>=1)stageEdge();
+ if(lvl>=3)stageGeometry();
+ if(lvl>=2)stageEdge();
+ if(lvl>=1)stageDilate();
  stageOutput();lvl=-1;
 }
+
+// ---- 消しゴム / 戻すブラシ ----
+function dab(cx,cy,erase){
+ const r=S.bs/2,x0=Math.max(0,Math.floor(cx-r-1)),x1=Math.min(W-1,Math.ceil(cx+r+1));
+ const y0=Math.max(0,Math.floor(cy-r-1)),y1=Math.min(H-1,Math.ceil(cy+r+1));
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+  const dx=x+.5-cx,dy=y+.5-cy,k=r-Math.sqrt(dx*dx+dy*dy)+.5;
+  if(k<=0)continue;
+  const cov=k>1?1:k,i=y*W+x;
+  if(erase){const v=255*(1-cov);if(v<ed[i])ed[i]=v}
+  else{const v=255*cov;if(v>ed[i])ed[i]=v}}
+}
+function updUndo(){$('#undo').disabled=!hist.length;$('#redo').disabled=!redo.length}
+function undo(){if(!hist.length)return;redo.push(ed.slice());ed.set(hist.pop());updUndo();need(0)}
+function redoIt(){if(!redo.length)return;hist.push(ed.slice());ed.set(redo.pop());updUndo();need(0)}
+$('#undo').onclick=undo;$('#redo').onclick=redoIt;
+window.addEventListener('keydown',e=>{
+ if(!(e.ctrlKey||e.metaKey)||/INPUT|TEXTAREA/.test(e.target.tagName)&&e.target.type!=='range')return;
+ const k=e.key.toLowerCase();
+ if(k==='z'){e.preventDefault();e.shiftKey?redoIt():undo()}
+ else if(k==='y'){e.preventDefault();redoIt()}
+});
 
 function load(f){
  if(!f||!f.type.startsWith('image/'))return;
@@ -250,20 +305,56 @@ dz.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
 window.addEventListener('dragover',e=>e.preventDefault());
 window.addEventListener('drop',e=>{if(!dz.contains(e.target)){e.preventDefault();load(e.dataTransfer.files[0])}});
 
-let drag=null;
-cv.addEventListener('pointerdown',e=>{if(!img)return;cv.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,ox:S.ox,oy:S.oy}});
-cv.addEventListener('pointermove',e=>{if(!drag)return;const k=W/cv.getBoundingClientRect().width;
- S.ox=drag.ox+(e.clientX-drag.x)*k;S.oy=drag.oy+(e.clientY-drag.y)*k;need(2)});
-['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>drag=null));
-function setZoom(z){S.zoom=z;const p=Math.round(z*100);$('#zoom').value=p;$('#zv').textContent=p+'%';need(2)}
+// ---- ポインター操作（移動 / 消しゴム / 戻すブラシ） ----
+let drag=null,paint=null;
+function pos(e){const b=cv.getBoundingClientRect();return{x:(e.clientX-b.left)*W/b.width,y:(e.clientY-b.top)*H/b.height,k:b.width/W}}
+function showBrush(e){
+ if(S.mode==='move'||!img){brushEl.style.display='none';return}
+ const b=stage.getBoundingClientRect(),k=cv.getBoundingClientRect().width/W,d=S.bs*k;
+ brushEl.style.cssText='display:block;width:'+d+'px;height:'+d+'px;left:'+(e.clientX-b.left)+'px;top:'+(e.clientY-b.top)+'px';
+}
+cv.addEventListener('pointerdown',e=>{
+ if(!img)return;
+ cv.setPointerCapture(e.pointerId);
+ if(S.mode==='move'){drag={x:e.clientX,y:e.clientY,ox:S.ox,oy:S.oy};return}
+ const p=pos(e);
+ paint={snap:ed.slice(),x:p.x,y:p.y,erase:S.mode==='erase'};
+ dab(p.x,p.y,paint.erase);showBrush(e);need(0);
+});
+cv.addEventListener('pointermove',e=>{
+ if(drag){const k=W/cv.getBoundingClientRect().width;
+  S.ox=drag.ox+(e.clientX-drag.x)*k;S.oy=drag.oy+(e.clientY-drag.y)*k;need(3);return}
+ showBrush(e);
+ if(!paint)return;
+ const p=pos(e),dx=p.x-paint.x,dy=p.y-paint.y,dist=Math.hypot(dx,dy);
+ const step=Math.max(1,S.bs/5),n=Math.max(1,Math.ceil(dist/step));
+ for(let s=1;s<=n;s++)dab(paint.x+dx*s/n,paint.y+dy*s/n,paint.erase);
+ paint.x=p.x;paint.y=p.y;need(0);
+});
+function endPtr(e){
+ drag=null;
+ if(paint){
+  let changed=false;for(let i=0;i<ed.length;i++)if(ed[i]!==paint.snap[i]){changed=true;break}
+  if(changed){hist.push(paint.snap);if(hist.length>HMAX)hist.shift();redo.length=0;updUndo()}
+  paint=null;
+ }
+ if(e&&e.pointerType==='touch')brushEl.style.display='none';
+}
+cv.addEventListener('pointerup',endPtr);
+cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('pointerleave',()=>{if(!paint)brushEl.style.display='none'});
+
+function setZoom(z){S.zoom=z;const p=Math.round(z*100);$('#zoom').value=p;$('#zv').textContent=p+'%';need(3)}
 cv.addEventListener('wheel',e=>{if(!img)return;e.preventDefault();setZoom(Math.min(4,Math.max(.3,S.zoom*(e.deltaY<0?1.05:.95))))},{passive:false});
 $('#zoom').oninput=e=>setZoom(e.target.value/100);
-$('#th').oninput=e=>{S.th=+e.target.value;need(1)};
-$('#mirror').onclick=()=>{S.mirror=!S.mirror;need(2)};
+$('#th').oninput=e=>{S.th=+e.target.value;need(2)};
+$('#bs').oninput=e=>{S.bs=+e.target.value;$('#bv').textContent=S.bs};
+$('#mirror').onclick=()=>{S.mirror=!S.mirror;need(3)};
 function group(id,fn){const g=$(id);g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
  g.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));fn(b.dataset.v)})}
+group('#mode',v=>{S.mode=v;stage.dataset.mode=v;brushEl.style.display='none'});
 group('#shape',v=>{S.shape=v;S.ox=S.oy=0;size();render()});
-group('#wd',v=>{S.w=+v;need(0)});
+group('#wd',v=>{S.w=+v;need(1)});
 group('#col',v=>{S.color=v;need(0)});
 group('#bg',v=>{S.bg=v;need(0)});
 
