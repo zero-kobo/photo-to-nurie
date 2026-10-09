@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>写真から一発ぬりえ＆アイコンメーカー｜無料・ブラウザだけで線画に変換</title>
+<meta name="description" content="写真を白黒の線画（ぬりえ）に変換して、LINE・SNS用の丸型アイコンや印刷用ぬりえを作れる無料ツール。画像はサーバーに送信されません。">
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--ink:#1f2937;--sub:#6b7280;--line:#e2e6ec;--acc:#3b6fd8;--acc2:#2c58b5;--hl:#ffe08a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic",Meiryo,system-ui,sans-serif;line-height:1.7}
+.wrap{max-width:960px;margin:0 auto;padding:0 16px}
+.pr{background:var(--ink);color:#fff;font-size:12px;text-align:center;padding:6px 8px}
+.pr b{background:var(--hl);color:var(--ink);border-radius:4px;padding:1px 6px;margin-right:6px}
+header{padding:28px 0 12px}
+h1{font-size:clamp(22px,4.6vw,32px);margin:0 0 6px;line-height:1.3}
+header p{margin:0;color:var(--sub)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:16px 0}
+h2{font-size:18px;margin:0 0 10px}
+h3{font-size:15px;margin:16px 0 4px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+#drop{border:2px dashed #b9c3d3;border-radius:12px;padding:14px;text-align:center;color:var(--sub);font-size:14px;margin-bottom:12px;background:#fafbfd}
+#drop.on{border-color:var(--acc);background:#eef3ff}
+#stage{position:relative;border-radius:12px;overflow:hidden;line-height:0;background:#fff;
+ background-image:linear-gradient(45deg,#e8ebf0 25%,transparent 25%,transparent 75%,#e8ebf0 75%),linear-gradient(45deg,#e8ebf0 25%,transparent 25%,transparent 75%,#e8ebf0 75%);background-size:20px 20px;background-position:0 0,10px 10px;border:1px solid var(--line)}
+#stage.paper{background:#fff}
+#cv{width:100%;height:auto;display:block;touch-action:none;cursor:grab}
+#cv:active{cursor:grabbing}
+#guide{position:absolute;inset:0;pointer-events:none}
+#guide i{position:absolute;inset:2%;border:2px dashed rgba(59,111,216,.85);border-radius:50%;box-shadow:0 0 0 999px rgba(243,245,248,.55)}
+#guide:after,#guide:before{content:"";position:absolute;background:rgba(59,111,216,.35)}
+#guide:before{left:50%;top:2%;bottom:2%;width:1px}
+#guide:after{top:50%;left:2%;right:2%;height:1px}
+#stage.rect #guide{display:none}
+#empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:14px;text-align:center;padding:20px;line-height:1.6}
+.row{margin:0 0 14px}
+.row label.t{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:4px}
+.row label.t span{font-weight:400;color:var(--sub)}
+input[type=range]{width:100%;height:32px;accent-color:var(--acc)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button,.btn,.file{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 14px;cursor:pointer;min-height:42px}
+.seg button{flex:1}
+.seg button.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+.sw{display:flex;gap:10px}
+.sw button{width:40px;height:40px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw button.on{box-shadow:0 0 0 3px var(--acc)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.actions .main{grid-column:1/-1;background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+.actions .main:hover{background:var(--acc2)}
+.file{background:var(--acc);color:#fff;border-color:var(--acc);display:inline-block;font-weight:700}
+.file input{display:none}
+button:focus-visible,.file:focus-within,input:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
+.ad{border:2px dashed #c7cfdb;border-radius:12px;padding:18px;text-align:center;color:var(--sub);font-size:13px;background:#fafbfd}
+.note{background:linear-gradient(0deg,#fff,#fff);border-left:6px solid var(--hl)}
+.note .ttl{font-weight:700;margin:6px 0 10px}
+.note a{display:inline-block;background:var(--ink);color:#fff;text-decoration:none;border-radius:10px;padding:10px 16px;font-size:14px}
+dt{font-weight:700;margin-top:14px}dd{margin:2px 0 0;color:#374151}
+ol{padding-left:20px;margin:0}
+footer{padding:20px 0 40px;color:var(--sub);font-size:12px}
+footer a{color:var(--acc)}
+@page{size:A4;margin:12mm}
+@media print{
+ body *{visibility:hidden}
+ #stage,#stage *{visibility:visible}
+ #guide,#empty{display:none!important}
+ #stage{position:absolute;left:0;top:0;width:100%;border:0;background:#fff!important;border-radius:0}
+ #cv{max-height:265mm;width:auto;max-width:100%;margin:0 auto}
+}
+</style>
+</head>
+<body>
+<div class="pr"><b>PR</b>本ページはプロモーション・広告を含みます</div>
+<div class="wrap">
+<header>
+ <h1>写真から一発ぬりえ＆アイコンメーカー</h1>
+ <p>写真を選ぶだけで、白黒の線画に変換。丸型のSNSアイコンにも、印刷用のぬりえにもなります。</p>
+</header>
+
+<main class="card">
+ <div class="grid">
+  <div>
+   <div id="drop">ここに写真をドラッグ＆ドロップ<br>または <label class="file">写真を選ぶ<input type="file" id="file" accept="image/*"></label></div>
+   <div id="stage">
+    <canvas id="cv" width="600" height="600" aria-label="プレビュー"></canvas>
+    <div id="guide"><i></i></div>
+    <div id="empty">写真を選ぶと、ここにぬりえが表示されます</div>
+   </div>
+   <p style="font-size:12px;color:var(--sub);margin:8px 0 0">ドラッグで位置を調整できます。</p>
+  </div>
+
+  <div>
+   <div class="row"><label class="t">形</label>
+    <div class="seg" id="shape"><button data-v="circle" class="on">丸型（アイコン用）</button><button data-v="rect">四角（元の比率）</button></div></div>
+   <div class="row"><label class="t" for="zoom">拡大・縮小 <span id="zv">100%</span></label>
+    <input type="range" id="zoom" min="30" max="400" value="100"></div>
+   <div class="row"><button class="btn" id="mirror" style="width:100%">↔ 左右反転</button></div>
+   <div class="row"><label class="t" for="th">線の細かさ <span>細かい ← → 主線のみ</span></label>
+    <input type="range" id="th" min="8" max="160" value="40"></div>
+   <div class="row"><label class="t">線の太さ</label>
+    <div class="seg" id="wd"><button data-v="1">1px</button><button data-v="2" class="on">2px</button><button data-v="3">3px</button></div></div>
+   <div class="row"><label class="t">線の色</label>
+    <div class="sw" id="col">
+     <button data-v="#000000" class="on" style="background:#000000" title="クラシックブラック" aria-label="クラシックブラック"></button>
+     <button data-v="#5c4033" style="background:#5c4033" title="セピア・ブラウン" aria-label="セピア・ブラウン"></button>
+     <button data-v="#1b2a4a" style="background:#1b2a4a" title="ネイビー" aria-label="ネイビー"></button>
+     <button data-v="#4a4a4a" style="background:#4a4a4a" title="チャコールグレー" aria-label="チャコールグレー"></button>
+    </div></div>
+   <div class="row"><label class="t">背景</label>
+    <div class="seg" id="bg"><button data-v="white" class="on">白背景</button><button data-v="clear">透過PNG</button></div></div>
+   <div class="actions">
+    <button class="btn main" id="save">画像を保存（PNG）</button>
+    <button class="btn" id="print">A4で印刷</button>
+    <button class="btn" id="share">Xでシェア</button>
+   </div>
+  </div>
+ </div>
+</main>
+
+<section class="card">
+ <h2>【PR】ぬりえを楽しむおすすめアイテム</h2>
+ <div class="ad" id="AFFILIATE_SLOT">ここにアフィリエイトバナー／テキストリンクを貼り付けます（A8.net など）</div>
+</section>
+
+<section class="card note">
+ <h2>📝 noteで詳しい塗り方・活用テクを公開中！</h2>
+ <div class="ttl">スマホ写真から作った線画をアイビスペイントで綺麗に塗るコツ</div>
+ <a href="#" id="NOTE_LINK" rel="noopener">noteで記事を読む</a>
+</section>
+
+<section class="card">
+ <h2>用語の解説</h2>
+ <dl style="margin:0">
+  <dt>しきい値（線の細かさ）とは？</dt>
+  <dd>写真のどのくらいの明るさの違いを「線」にするかを決める基準です。小さくすると細かい線まで拾い、大きくすると輪郭などの主な線だけが残ります。写真がごちゃごちゃして見えるときは大きめに、のっぺりするときは小さめに調整しましょう。</dd>
+  <dt>透過PNGとは？</dt>
+  <dd>線以外の部分が透明になっている画像形式です。お絵描きアプリで下絵のレイヤーとして重ねると、下に塗った色がそのまま見えます。</dd>
+  <dt>推奨アイコンサイズ（600×600px）とは？</dt>
+  <dd>LINEなど多くのSNSで使われる、正方形のアイコン画像の目安サイズです。このツールの丸型モードは600×600pxで保存されるので、そのままプロフィール画像に設定できます。</dd>
+ </dl>
+</section>
+
+<section class="card">
+ <h2>使い方・よくある質問</h2>
+ <ol>
+  <li>「写真を選ぶ」か、ドラッグ＆ドロップで写真を読み込みます。</li>
+  <li>位置・拡大・線の細かさ・色などをお好みに調整します。</li>
+  <li>「画像を保存」または「A4で印刷」で完成です。</li>
+ </ol>
+ <dl>
+  <dt>Q. アップロードした写真はサーバーに送信されますか？</dt>
+  <dd>A. ブラウザ内のみで処理されるため、外部へ送信・保存されることはありません。</dd>
+  <dt>Q. 線が多すぎる／少なすぎるときは？</dt>
+  <dd>A. 「線の細かさ」スライダーで調整してください。</dd>
+ </dl>
+</section>
+
+<footer>
+ <p>免責事項：本ツールで生成した画像の正確性は保証しません。著作権・肖像権に配慮し、私的利用の範囲でお使いください。</p>
+ <p>お問い合わせ：<a href="#" id="CONTACT_LINK" rel="noopener">SNSアカウント／フォームはこちら</a></p>
+</footer>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const cv=$('#cv'),ctx=cv.getContext('2d',{willReadFrequently:true});
+const src=document.createElement('canvas'),sx=src.getContext('2d',{willReadFrequently:true});
+const S={shape:'circle',ox:0,oy:0,zoom:1,mirror:false,th:40,w:2,color:'#000000',bg:'white'};
+let img=null,W=600,H=600,raf=0;
+
+function size(){
+ if(S.shape==='circle'||!img){W=H=600}
+ else{const r=img.width/img.height;if(r>=1){W=800;H=Math.round(800/r)}else{H=800;W=Math.round(800*r)}}
+ cv.width=src.width=W;cv.height=src.height=H;
+ $('#stage').classList.toggle('rect',S.shape==='rect');
+}
+function later(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render()})}
+
+function render(){
+ $('#stage').classList.toggle('paper',S.bg==='white');
+ $('#empty').style.display=img?'none':'flex';
+ if(!img){ctx.clearRect(0,0,W,H);return}
+ sx.fillStyle='#fff';sx.fillRect(0,0,W,H);
+ sx.save();sx.translate(W/2+S.ox,H/2+S.oy);
+ if(S.mirror)sx.scale(-1,1);
+ const s=Math.max(W/img.width,H/img.height)*S.zoom;
+ sx.scale(s,s);sx.drawImage(img,-img.width/2,-img.height/2);sx.restore();
+ const d=sx.getImageData(0,0,W,H).data,N=W*H;
+ const g=new Float32Array(N),b=new Float32Array(N);
+ for(let i=0;i<N;i++)g[i]=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];
+ for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;
+  b[i]=(g[i-W-1]+g[i-W]+g[i-W+1]+g[i-1]+g[i]+g[i+1]+g[i+W-1]+g[i+W]+g[i+W+1])/9}
+ let a=new Uint8Array(N);const th=S.th;
+ for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){const i=y*W+x;
+  const gx=b[i-W+1]+2*b[i+1]+b[i+W+1]-b[i-W-1]-2*b[i-1]-b[i+W-1];
+  const gy=b[i+W-1]+2*b[i+W]+b[i+W+1]-b[i-W-1]-2*b[i-W]-b[i-W+1];
+  const m=Math.sqrt(gx*gx+gy*gy)/4;
+  const v=(m-th)*10+128;a[i]=v<0?0:v>255?255:v}
+ if(S.w>1){const o=new Uint8Array(N);
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;
+   let m=Math.max(a[i],a[i-1],a[i+1],a[i-W],a[i+W]);
+   if(S.w>2)m=Math.max(m,a[i-W-1],a[i-W+1],a[i+W-1],a[i+W+1]);
+   o[i]=m}
+  a=o}
+ const c=parseInt(S.color.slice(1),16),r=c>>16&255,gg=c>>8&255,bb=c&255;
+ const out=ctx.createImageData(W,H),p=out.data,R=W/2,R2=R*R;
+ const circ=S.shape==='circle',white=S.bg==='white';
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,j=i*4;
+  let al=a[i];
+  if(circ){const dx=x+.5-R,dy=y+.5-R;if(dx*dx+dy*dy>R2)al=0}
+  if(white){const k=al/255;p[j]=255-k*(255-r);p[j+1]=255-k*(255-gg);p[j+2]=255-k*(255-bb);p[j+3]=255}
+  else{p[j]=r;p[j+1]=gg;p[j+2]=bb;p[j+3]=al}}
+ ctx.putImageData(out,0,0);
+}
+
+function load(f){
+ if(!f||!f.type.startsWith('image/'))return;
+ const u=URL.createObjectURL(f),im=new Image();
+ im.onload=()=>{img=im;S.ox=S.oy=0;S.zoom=1;$('#zoom').value=100;$('#zv').textContent='100%';size();render();URL.revokeObjectURL(u)};
+ im.onerror=()=>alert('画像を読み込めませんでした。別のファイルをお試しください。');
+ im.src=u;
+}
+$('#file').onchange=e=>load(e.target.files[0]);
+const dz=$('#drop');
+['dragenter','dragover'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.add('on')}));
+['dragleave','drop'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.remove('on')}));
+dz.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
+window.addEventListener('dragover',e=>e.preventDefault());
+window.addEventListener('drop',e=>{if(!dz.contains(e.target)){e.preventDefault();load(e.dataTransfer.files[0])}});
+
+let drag=null;
+cv.addEventListener('pointerdown',e=>{if(!img)return;cv.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,ox:S.ox,oy:S.oy}});
+cv.addEventListener('pointermove',e=>{if(!drag)return;const k=W/cv.getBoundingClientRect().width;
+ S.ox=drag.ox+(e.clientX-drag.x)*k;S.oy=drag.oy+(e.clientY-drag.y)*k;later()});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>drag=null));
+cv.addEventListener('wheel',e=>{if(!img)return;e.preventDefault();
+ const z=Math.min(4,Math.max(.3,S.zoom*(e.deltaY<0?1.05:.95)));S.zoom=z;$('#zoom').value=Math.round(z*100);$('#zv').textContent=Math.round(z*100)+'%';later()},{passive:false});
+
+$('#zoom').oninput=e=>{S.zoom=e.target.value/100;$('#zv').textContent=e.target.value+'%';later()};
+$('#th').oninput=e=>{S.th=+e.target.value;later()};
+$('#mirror').onclick=()=>{S.mirror=!S.mirror;later()};
+function group(id,fn){const g=$(id);g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ g.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));fn(b.dataset.v)})}
+group('#shape',v=>{S.shape=v;S.ox=S.oy=0;size();render()});
+group('#wd',v=>{S.w=+v;later()});
+group('#col',v=>{S.color=v;later()});
+group('#bg',v=>{S.bg=v;later()});
+
+function need(){if(!img){alert('先に写真を選んでください。');return false}return true}
+$('#save').onclick=()=>{if(!need())return;render();cv.toBlob(b=>{
+ const a=document.createElement('a');a.href=URL.createObjectURL(b);
+ a.download=(S.shape==='circle'?'nurie-icon-600':'nurie')+'.png';
+ document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)},'image/png')};
+$('#print').onclick=()=>{if(need())window.print()};
+$('#share').onclick=()=>{
+ const u='https://twitter.com/intent/tweet?text='+encodeURIComponent('写真をぬりえアイコンに変換しました！')+'&url='+encodeURIComponent(location.href);
+ window.open(u,'_blank','noopener')};
+size();render();
+})();
+</script>
+</body>
+</html>
